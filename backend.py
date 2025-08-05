@@ -16,53 +16,60 @@ ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 
 # --------------------------
 # Create DB and tables if not exists
+import sqlite3
+import os
+
 def initialize_database():
-  def initialize_database():
     if not os.path.exists("booking.db"):
-        print("📦 Creating booking.db and tables...")
-
-        # Embedded schema (no need to read schema.sql)
-        schema = """
-        CREATE TABLE IF NOT EXISTS bookings (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            booking_type TEXT,
-            school_name TEXT,
-            title_used TEXT,
-            grade TEXT,
-            curriculum TEXT,
-            subject TEXT,
-            topic TEXT,
-            slot TEXT,
-            date TEXT,
-            teacher TEXT,
-            salesperson_name TEXT,
-            email TEXT
-        );
-
-        CREATE TABLE IF NOT EXISTS teacher_absence (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            teacher TEXT,
-            date TEXT,
-            slot TEXT
-        );
-
-        CREATE TABLE IF NOT EXISTS subject_teacher_map (
-            subject TEXT PRIMARY KEY,
-            main_teacher TEXT,
-            fallback1 TEXT,
-            fallback2 TEXT,
-            fallback3 TEXT
-        );
-        """
-
+        print("📁 Creating booking.db...")
         conn = sqlite3.connect("booking.db")
         cursor = conn.cursor()
-        cursor.executescript(schema)
+
+        # Create bookings table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS bookings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                booking_type TEXT,
+                school_name TEXT,
+                title_used TEXT,
+                grade TEXT,
+                curriculum TEXT,
+                subject TEXT,
+                slot TEXT,
+                date TEXT,
+                topic TEXT,
+                teacher TEXT,
+                salesperson TEXT,
+                email TEXT
+            )
+        """)
+
+        # Create teacher absence table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS teacher_absence (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                teacher TEXT,
+                date TEXT,
+                slot TEXT
+            )
+        """)
+
+        # Create subject-teacher mapping table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS subject_teacher_map (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                subject TEXT,
+                main_teacher TEXT,
+                fallback1 TEXT,
+                fallback2 TEXT
+            )
+        """)
+
         conn.commit()
         conn.close()
+        print("✅ booking.db created successfully!")
 
-        print("✅ booking.db and tables created successfully!")
-
+# Call this at the top of your backend.py (before any DB access)
 initialize_database()
 
 # Connect DB
@@ -309,6 +316,7 @@ def get_teacher_unavailability():
     cols = [desc[0] for desc in cursor.description]
     conn.close()
     return [dict(zip(cols, row)) for row in rows]
+
 
 
 
