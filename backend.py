@@ -4,7 +4,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 import smtplib
 from email.message import EmailMessage
-import SSL
+import ssl
 import os
 os.environ["STREAMLIT_CLOUD"] = "1"
 
@@ -274,5 +274,6 @@ def get_teacher_unavailability():
     cols = [desc[0] for desc in cursor.description]
     conn.close()
     return [dict(zip(cols, row)) for row in rows]
+
 
 
