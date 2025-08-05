@@ -1,19 +1,3 @@
-import sqlite3
-import os
-from datetime import datetime
-from dotenv import load_dotenv
-import smtplib
-from email.message import EmailMessage
-import ssl
-import os
-os.environ["STREAMLIT_CLOUD"] = "1"
-
-load_dotenv()
-
-EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
-EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
-
 # --------------------------
 # Create DB and tables if not exists
 import sqlite3
@@ -71,6 +55,23 @@ def initialize_database():
 
 # Call this at the top of your backend.py (before any DB access)
 initialize_database()
+
+import sqlite3
+import os
+from datetime import datetime
+from dotenv import load_dotenv
+import smtplib
+from email.message import EmailMessage
+import ssl
+import os
+os.environ["STREAMLIT_CLOUD"] = "1"
+
+load_dotenv()
+
+EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
+
 
 # Connect DB
 # --------------------------
