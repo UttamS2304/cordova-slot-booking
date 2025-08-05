@@ -1,16 +1,37 @@
 import streamlit as st
+import sqlite3
 from backend import (
     get_all_bookings, delete_booking,
     mark_teacher_unavailable, delete_teacher_unavailability,
     get_teacher_unavailability
 )
 
+# ----------------------------------------
+# Ensure using the correct DB: booking.db
+# ----------------------------------------
+def ensure_booking_db_connection():
+    try:
+        conn = sqlite3.connect("booking.db")
+        conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        conn.close()
+    except Exception as e:
+        st.error(f"Database connection failed: {e}")
+        st.stop()
+
+ensure_booking_db_connection()
+
+# ----------------------------------------
+# Teacher List
+# ----------------------------------------
 TEACHERS = [
     "Bharti Ma'am", "Vivek Sir", "Dakshika", "Ishita", "Shivangi",
     "Kalpana Ma'am", "Payal", "Sneha", "Aparajita",
     "Deepanshi", "Megha", "Yaindrila Ma'am", "Arpit", "Geetanjali"
 ]
 
+# ----------------------------------------
+# Streamlit UI Setup
+# ----------------------------------------
 st.set_page_config(page_title="Admin Dashboard", layout="wide")
 st.title("📊 Cordova Admin Dashboard")
 
@@ -36,7 +57,7 @@ with tabs[1]:
     st.subheader("🗑️ Delete Booking")
     bookings = get_all_bookings()
     if bookings:
-        selected = st.selectbox("Select a booking to delete", bookings)
+        selected = st.selectbox("Select a booking to delete", bookings, format_func=lambda b: f"{b['school_name']} | {b['subject']} | {b['date']} | {b['slot']}")
         if st.button("Delete Booking", type="primary"):
             delete_booking(selected)
             st.success("✅ Booking deleted and emails sent.")
@@ -59,7 +80,7 @@ with tabs[3]:
     st.subheader("✅ Unmark Teacher Unavailability")
     absences = get_teacher_unavailability()
     if absences:
-        selected = st.selectbox("Select absence to remove", absences)
+        selected = st.selectbox("Select absence to remove", absences, format_func=lambda a: f"{a['teacher']} | {a['date']} | {a['slot'] or 'Full Day'}")
         if st.button("Remove Unavailability"):
             delete_teacher_unavailability(
                 selected["teacher"], selected["date"], selected["slot"]
