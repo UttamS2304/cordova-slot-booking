@@ -1,21 +1,53 @@
 import sqlite3
 
-# Read SQL schema file
-with open("schema.sql", "r") as f:
-    schema = f.read()
+def initialize_database():
+    conn = sqlite3.connect("cordova_publication.db")
+    cursor = conn.cursor()
 
-# Connect to (or create) SQLite database file
-conn = sqlite3.connect("cordova_publication.db")
+    # Create bookings table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS bookings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            booking_type TEXT,
+            school_name TEXT,
+            title_used TEXT,
+            grade TEXT,
+            curriculum TEXT,
+            subject TEXT,
+            slot TEXT,
+            date TEXT,
+            topic TEXT,
+            teacher TEXT,
+            salesperson TEXT,
+            email TEXT
+        )
+    """)
 
-# Create a cursor to execute commands
-cursor = conn.cursor()
+    # Create teacher_unavailability table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS teacher_unavailability (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            teacher TEXT,
+            date TEXT,
+            slot TEXT
+        )
+    """)
 
-# Run schema to create tables
-cursor.executescript(schema)
+    # Create subject_teacher_map table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS subject_teacher_map (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            subject TEXT,
+            main_teacher TEXT,
+            fallback1 TEXT,
+            fallback2 TEXT
+        )
+    """)
 
-# Save and close
-conn.commit()
-conn.close()
+    conn.commit()
+    conn.close()
+    print("✅ All required tables created successfully in cordova_publication.db.")
 
-print("✅ Database initialized successfully!")
-
+# Run initialization
+if __name__ == "__main__":
+    initialize_database()
