@@ -5,7 +5,6 @@ from backend import (
     get_teacher_unavailability
 )
 
-# All valid teacher names for dropdown
 TEACHERS = [
     "Bharti Ma'am", "Vivek Sir", "Dakshika", "Ishita", "Shivangi",
     "Kalpana Ma'am", "Payal", "Sneha", "Aparajita",
@@ -23,53 +22,53 @@ tabs = st.tabs([
     "📈 Analytics (Coming Soon)"
 ])
 
-# ------------------- Tab 1: View Bookings ------------------- #
+# ------------------ View All Bookings ------------------ #
 with tabs[0]:
     st.subheader("📅 All Bookings Overview")
-    all_bookings = get_all_bookings()
-    if all_bookings:
-        st.dataframe(all_bookings, use_container_width=True)
+    bookings = get_all_bookings()
+    if bookings:
+        st.dataframe(bookings, use_container_width=True)
     else:
         st.info("No bookings found.")
 
-# ------------------- Tab 2: Delete Booking ------------------- #
+# ------------------ Delete Booking ------------------ #
 with tabs[1]:
     st.subheader("🗑️ Delete Booking")
-    all_bookings = get_all_bookings()
-    if not all_bookings:
-        st.warning("No bookings available to delete.")
-    else:
-        selected = st.selectbox("Select a booking to delete", all_bookings)
+    bookings = get_all_bookings()
+    if bookings:
+        selected = st.selectbox("Select a booking to delete", bookings)
         if st.button("Delete Booking", type="primary"):
             delete_booking(selected)
             st.success("✅ Booking deleted and emails sent.")
+    else:
+        st.warning("No bookings available to delete.")
 
-# ------------------- Tab 3: Mark Teacher Unavailable ------------------- #
+# ------------------ Mark Teacher Unavailable ------------------ #
 with tabs[2]:
     st.subheader("⛔ Mark Teacher Unavailable")
     teacher = st.selectbox("Select Teacher", TEACHERS)
     date = st.date_input("Unavailable Date")
-    slot = st.text_input("Time Slot (optional, leave blank for full day)")
+    slot = st.text_input("Time Slot (leave blank for full day)")
     if st.button("Mark Unavailable"):
-        slot_value = slot.strip() if slot.strip() else None
-        mark_teacher_unavailable(teacher, str(date), slot_value)
-        st.success(f"✅ Marked {teacher} unavailable on {date}" + (f" during {slot}" if slot_value else " for full day."))
+        final_slot = slot.strip() if slot.strip() else None
+        mark_teacher_unavailable(teacher, str(date), final_slot)
+        st.success(f"✅ Marked {teacher} unavailable on {date}" + (f" during {slot}" if final_slot else " for full day."))
 
-# ------------------- Tab 4: Unmark Teacher Unavailability ------------------- #
+# ------------------ Unmark Teacher Unavailable ------------------ #
 with tabs[3]:
     st.subheader("✅ Unmark Teacher Unavailability")
     absences = get_teacher_unavailability()
-    if not absences:
-        st.info("No teachers marked as unavailable.")
-    else:
-        selected = st.selectbox("Select an absence to remove", absences)
+    if absences:
+        selected = st.selectbox("Select absence to remove", absences)
         if st.button("Remove Unavailability"):
             delete_teacher_unavailability(
                 selected["teacher"], selected["date"], selected["slot"]
             )
             st.success(f"✅ Removed unavailability for {selected['teacher']} on {selected['date']}")
+    else:
+        st.info("No teachers marked as unavailable.")
 
-# ------------------- Tab 5: Analytics (Placeholder) ------------------- #
+# ------------------ Analytics Placeholder ------------------ #
 with tabs[4]:
     st.subheader("📈 Analytics (Coming Soon)")
-    st.info("This section will include charts and booking insights in future.")
+    st.info("This section will show booking insights and charts.")
