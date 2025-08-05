@@ -8,6 +8,8 @@ import smtplib
 from email.message import EmailMessage
 import ssl
 from teacher_mapping import get_teacher_for_subject
+from init_db import initialize_database
+initialize_database()
 
 # --------------------------
 # Environment Setup
