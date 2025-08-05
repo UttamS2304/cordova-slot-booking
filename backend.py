@@ -9,11 +9,11 @@ from email.message import EmailMessage
 import ssl
 from teacher_mapping import get_teacher_for_subject
 from init_db import initialize_database
-initialize_database()
 
 # --------------------------
-# Environment Setup
+# Initialize DB and load env
 # --------------------------
+initialize_database()
 os.environ["STREAMLIT_CLOUD"] = "1"
 load_dotenv()
 
@@ -21,66 +21,13 @@ EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 
-# --------------------------
-# Create DB and tables if not exist
-# --------------------------
-def initialize_database():
-    if not os.path.exists("booking.db"):
-        print("📁 Creating booking.db...")
-        conn = sqlite3.connect("booking.db")
-        cursor = conn.cursor()
-
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS bookings (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                booking_type TEXT,
-                school_name TEXT,
-                title_used TEXT,
-                grade TEXT,
-                curriculum TEXT,
-                subject TEXT,
-                slot TEXT,
-                date TEXT,
-                topic TEXT,
-                salesperson_name TEXT,
-                salesperson_number TEXT,
-                teacher TEXT,
-                email TEXT,
-                timestamp TEXT
-            )
-        """)
-
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS teacher_unavailability (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                teacher TEXT,
-                date TEXT,
-                slot TEXT
-            )
-        """)
-
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS subject_teacher_map (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                subject TEXT,
-                main_teacher TEXT,
-                fallback1 TEXT,
-                fallback2 TEXT
-            )
-        """)
-
-        conn.commit()
-        conn.close()
-        print("✅ booking.db created successfully!")
-
-# Run this before anything
-initialize_database()
 
 # --------------------------
-# Connect DB
+# Connect DB (single source of truth)
 # --------------------------
 def connect_db():
-    return sqlite3.connect("booking.db")
+    return sqlite3.connect("cordova_publication.db")
+
 
 # --------------------------
 # Get teacher email
@@ -88,6 +35,7 @@ def connect_db():
 def get_teacher_email(name):
     env_key = f"TEACHER_EMAIL_{name.upper().replace(' ', '')}"
     return os.getenv(env_key, "default@school.com")
+
 
 # --------------------------
 # Check teacher availability
@@ -102,6 +50,7 @@ def is_teacher_available(teacher, date, slot):
     result = cursor.fetchone()[0]
     conn.close()
     return result == 0
+
 
 # --------------------------
 # Attempt booking
@@ -118,6 +67,7 @@ def attempt_booking(form_data):
     record_booking(form_data)
     send_email_notification("confirmation", form_data)
     return True, "✅ Session successfully booked!"
+
 
 # --------------------------
 # Record booking
@@ -140,6 +90,7 @@ def record_booking(data):
     conn.commit()
     conn.close()
 
+
 # --------------------------
 # Get all bookings
 # --------------------------
@@ -151,6 +102,7 @@ def get_all_bookings():
     results = [dict(zip(cols, row)) for row in cursor.fetchall()]
     conn.close()
     return results
+
 
 # --------------------------
 # Delete booking
@@ -171,6 +123,7 @@ def delete_booking(row_data):
     conn.close()
     send_email_notification("cancellation", row_data)
 
+
 # --------------------------
 # Send emails
 # --------------------------
@@ -181,8 +134,8 @@ def send_email_notification(email_type, form_data):
             server.starttls(context=ssl.create_default_context())
             server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
 
-            # Salesperson Email
             if email_type == "confirmation":
+                # Salesperson
                 msg["From"] = EMAIL_ADDRESS
                 msg["To"] = form_data["email"]
                 msg["Subject"] = "✅ Your Cordova Class is Confirmed"
@@ -201,7 +154,7 @@ Topic: {form_data['topic'] or 'N/A'}
                 server.send_message(msg)
                 msg.clear()
 
-                # Teacher Email
+                # Teacher
                 msg["To"] = get_teacher_email(form_data["teacher"])
                 msg["Subject"] = "✅ New Cordova Session Assigned"
                 msg.set_content(f"""You have a new session to conduct.
@@ -218,7 +171,7 @@ Topic: {form_data['topic'] or 'N/A'}
                 server.send_message(msg)
                 msg.clear()
 
-                # Admin Email
+                # Admin
                 msg["To"] = ADMIN_EMAIL
                 msg["Subject"] = "📢 New Cordova Booking Created"
                 msg.set_content(f"""A new booking has been created:
@@ -236,7 +189,7 @@ Salesperson: {form_data['salesperson_name']} ({form_data['salesperson_number']})
                 server.send_message(msg)
 
             elif email_type == "cancellation":
-                # Cancellation Emails
+                # Salesperson
                 msg["To"] = form_data["email"]
                 msg["Subject"] = "❌ Cordova Class Cancelled"
                 msg.set_content(f"""Dear {form_data['salesperson_name']},
@@ -252,6 +205,7 @@ Slot: {form_data['slot']}
                 server.send_message(msg)
                 msg.clear()
 
+                # Teacher
                 msg["To"] = get_teacher_email(form_data["teacher"])
                 msg["Subject"] = "❌ Cordova Session Cancelled"
                 msg.set_content(f"""Your assigned session has been cancelled.
@@ -267,6 +221,7 @@ Grade: {form_data['grade']}
     except Exception as e:
         print(f"❌ Email Error: {e}")
 
+
 # --------------------------
 # Mark Teacher Unavailable
 # --------------------------
@@ -279,6 +234,7 @@ def mark_teacher_unavailable(teacher, date, slot=None):
     """, (teacher, date, slot))
     conn.commit()
     conn.close()
+
 
 # --------------------------
 # Remove Teacher Unavailability
@@ -293,6 +249,7 @@ def delete_teacher_unavailability(teacher, date, slot=None):
     conn.commit()
     conn.close()
 
+
 # --------------------------
 # Get All Teacher Unavailability
 # --------------------------
@@ -304,9 +261,3 @@ def get_teacher_unavailability():
     cols = [desc[0] for desc in cursor.description]
     conn.close()
     return [dict(zip(cols, row)) for row in rows]
-
-
-
-
-
-
