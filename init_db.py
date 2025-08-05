@@ -4,7 +4,7 @@ def initialize_database():
     conn = sqlite3.connect("cordova_publication.db")
     cursor = conn.cursor()
 
-    # Create bookings table
+    # Table 1: Bookings
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS bookings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -18,12 +18,14 @@ def initialize_database():
             date TEXT,
             topic TEXT,
             teacher TEXT,
-            salesperson TEXT,
-            email TEXT
+            salesperson_name TEXT,
+            salesperson_number TEXT,
+            email TEXT,
+            timestamp TEXT
         )
     """)
 
-    # Create teacher_unavailability table
+    # Table 2: Teacher Unavailability
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS teacher_unavailability (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,7 +35,7 @@ def initialize_database():
         )
     """)
 
-    # Create subject_teacher_map table
+    # Table 3: Subject-Teacher Mapping
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS subject_teacher_map (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -46,8 +48,3 @@ def initialize_database():
 
     conn.commit()
     conn.close()
-    print("✅ All required tables created successfully in cordova_publication.db.")
-
-# Run initialization
-if __name__ == "__main__":
-    initialize_database()
