@@ -17,16 +17,51 @@ ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 # --------------------------
 # Create DB and tables if not exists
 def initialize_database():
-   if os.environ.get("STREAMLIT_CLOUD", "0") == "1" or not os.path.exists("booking.db"):
-        print("🔧 Creating booking.db...")
-        with open("schema.sql", "r") as f:
-            schema = f.read()
+  def initialize_database():
+    if not os.path.exists("booking.db"):
+        print("📦 Creating booking.db and tables...")
+
+        # Embedded schema (no need to read schema.sql)
+        schema = """
+        CREATE TABLE IF NOT EXISTS bookings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            booking_type TEXT,
+            school_name TEXT,
+            title_used TEXT,
+            grade TEXT,
+            curriculum TEXT,
+            subject TEXT,
+            topic TEXT,
+            slot TEXT,
+            date TEXT,
+            teacher TEXT,
+            salesperson_name TEXT,
+            email TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS teacher_absence (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            teacher TEXT,
+            date TEXT,
+            slot TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS subject_teacher_map (
+            subject TEXT PRIMARY KEY,
+            main_teacher TEXT,
+            fallback1 TEXT,
+            fallback2 TEXT,
+            fallback3 TEXT
+        );
+        """
+
         conn = sqlite3.connect("booking.db")
         cursor = conn.cursor()
         cursor.executescript(schema)
         conn.commit()
         conn.close()
-        print("✅ booking.db created successfully!")
+
+        print("✅ booking.db and tables created successfully!")
 
 initialize_database()
 
@@ -274,6 +309,7 @@ def get_teacher_unavailability():
     cols = [desc[0] for desc in cursor.description]
     conn.close()
     return [dict(zip(cols, row)) for row in rows]
+
 
 
 
