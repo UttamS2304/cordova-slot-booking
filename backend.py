@@ -1,15 +1,33 @@
-# --------------------------
-# Create DB and tables if not exists
+# backend.py
+
 import sqlite3
 import os
+from datetime import datetime
+from dotenv import load_dotenv
+import smtplib
+from email.message import EmailMessage
+import ssl
+from teacher_mapping import get_teacher_for_subject
 
+# --------------------------
+# Environment Setup
+# --------------------------
+os.environ["STREAMLIT_CLOUD"] = "1"
+load_dotenv()
+
+EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
+
+# --------------------------
+# Create DB and tables if not exist
+# --------------------------
 def initialize_database():
     if not os.path.exists("booking.db"):
         print("📁 Creating booking.db...")
         conn = sqlite3.connect("booking.db")
         cursor = conn.cursor()
 
-        # Create bookings table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS bookings (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -22,15 +40,16 @@ def initialize_database():
                 slot TEXT,
                 date TEXT,
                 topic TEXT,
+                salesperson_name TEXT,
+                salesperson_number TEXT,
                 teacher TEXT,
-                salesperson TEXT,
-                email TEXT
+                email TEXT,
+                timestamp TEXT
             )
         """)
 
-        # Create teacher absence table
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS teacher_absence (
+            CREATE TABLE IF NOT EXISTS teacher_unavailability (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 teacher TEXT,
                 date TEXT,
@@ -38,7 +57,6 @@ def initialize_database():
             )
         """)
 
-        # Create subject-teacher mapping table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS subject_teacher_map (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,48 +71,24 @@ def initialize_database():
         conn.close()
         print("✅ booking.db created successfully!")
 
-# Call this at the top of your backend.py (before any DB access)
+# Run this before anything
 initialize_database()
 
-import sqlite3
-import os
-from datetime import datetime
-from dotenv import load_dotenv
-import smtplib
-from email.message import EmailMessage
-import ssl
-import os
-os.environ["STREAMLIT_CLOUD"] = "1"
-
-load_dotenv()
-
-EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
-EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
-
-
+# --------------------------
 # Connect DB
 # --------------------------
 def connect_db():
-    return sqlite3.connect("cordova_publication.db")
-
+    return sqlite3.connect("booking.db")
 
 # --------------------------
-# Get teacher email from .env
+# Get teacher email
 # --------------------------
 def get_teacher_email(name):
     env_key = f"TEACHER_EMAIL_{name.upper().replace(' ', '')}"
     return os.getenv(env_key, "default@school.com")
 
-
 # --------------------------
-# Get teacher from mapping
-# --------------------------
-from teacher_mapping import get_teacher_for_subject
-
-
-# --------------------------
-# Check availability
+# Check teacher availability
 # --------------------------
 def is_teacher_available(teacher, date, slot):
     conn = connect_db()
@@ -106,7 +100,6 @@ def is_teacher_available(teacher, date, slot):
     result = cursor.fetchone()[0]
     conn.close()
     return result == 0
-
 
 # --------------------------
 # Attempt booking
@@ -124,9 +117,8 @@ def attempt_booking(form_data):
     send_email_notification("confirmation", form_data)
     return True, "✅ Session successfully booked!"
 
-
 # --------------------------
-# Save booking to DB
+# Record booking
 # --------------------------
 def record_booking(data):
     conn = connect_db()
@@ -146,7 +138,6 @@ def record_booking(data):
     conn.commit()
     conn.close()
 
-
 # --------------------------
 # Get all bookings
 # --------------------------
@@ -159,9 +150,8 @@ def get_all_bookings():
     conn.close()
     return results
 
-
 # --------------------------
-# Delete a booking
+# Delete booking
 # --------------------------
 def delete_booking(row_data):
     conn = connect_db()
@@ -179,9 +169,8 @@ def delete_booking(row_data):
     conn.close()
     send_email_notification("cancellation", row_data)
 
-
 # --------------------------
-# Email sending logic
+# Send emails
 # --------------------------
 def send_email_notification(email_type, form_data):
     msg = EmailMessage()
@@ -190,8 +179,8 @@ def send_email_notification(email_type, form_data):
             server.starttls(context=ssl.create_default_context())
             server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
 
+            # Salesperson Email
             if email_type == "confirmation":
-                # Salesperson
                 msg["From"] = EMAIL_ADDRESS
                 msg["To"] = form_data["email"]
                 msg["Subject"] = "✅ Your Cordova Class is Confirmed"
@@ -210,7 +199,7 @@ Topic: {form_data['topic'] or 'N/A'}
                 server.send_message(msg)
                 msg.clear()
 
-                # Teacher
+                # Teacher Email
                 msg["To"] = get_teacher_email(form_data["teacher"])
                 msg["Subject"] = "✅ New Cordova Session Assigned"
                 msg.set_content(f"""You have a new session to conduct.
@@ -218,16 +207,16 @@ Topic: {form_data['topic'] or 'N/A'}
 Subject: {form_data['subject']}
 Date: {form_data['date']}
 Slot: {form_data['slot']}
-Type: {form_data['booking_type']}
-Topic: {form_data['topic'] or 'N/A'}
 School: {form_data['school_name']}
 Grade: {form_data['grade']}
 Curriculum: {form_data['curriculum']}
+Type: {form_data['booking_type']}
+Topic: {form_data['topic'] or 'N/A'}
 """)
                 server.send_message(msg)
                 msg.clear()
 
-                # Admin
+                # Admin Email
                 msg["To"] = ADMIN_EMAIL
                 msg["Subject"] = "📢 New Cordova Booking Created"
                 msg.set_content(f"""A new booking has been created:
@@ -245,7 +234,7 @@ Salesperson: {form_data['salesperson_name']} ({form_data['salesperson_number']})
                 server.send_message(msg)
 
             elif email_type == "cancellation":
-                # Salesperson
+                # Cancellation Emails
                 msg["To"] = form_data["email"]
                 msg["Subject"] = "❌ Cordova Class Cancelled"
                 msg.set_content(f"""Dear {form_data['salesperson_name']},
@@ -261,7 +250,6 @@ Slot: {form_data['slot']}
                 server.send_message(msg)
                 msg.clear()
 
-                # Teacher
                 msg["To"] = get_teacher_email(form_data["teacher"])
                 msg["Subject"] = "❌ Cordova Session Cancelled"
                 msg.set_content(f"""Your assigned session has been cancelled.
@@ -277,9 +265,8 @@ Grade: {form_data['grade']}
     except Exception as e:
         print(f"❌ Email Error: {e}")
 
-
 # --------------------------
-# Mark teacher unavailable
+# Mark Teacher Unavailable
 # --------------------------
 def mark_teacher_unavailable(teacher, date, slot=None):
     conn = connect_db()
@@ -291,9 +278,8 @@ def mark_teacher_unavailable(teacher, date, slot=None):
     conn.commit()
     conn.close()
 
-
 # --------------------------
-# Delete teacher unavailability
+# Remove Teacher Unavailability
 # --------------------------
 def delete_teacher_unavailability(teacher, date, slot=None):
     conn = connect_db()
@@ -305,9 +291,8 @@ def delete_teacher_unavailability(teacher, date, slot=None):
     conn.commit()
     conn.close()
 
-
 # --------------------------
-# Get all teacher unavailability
+# Get All Teacher Unavailability
 # --------------------------
 def get_teacher_unavailability():
     conn = connect_db()
@@ -317,6 +302,7 @@ def get_teacher_unavailability():
     cols = [desc[0] for desc in cursor.description]
     conn.close()
     return [dict(zip(cols, row)) for row in rows]
+
 
 
 
