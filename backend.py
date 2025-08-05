@@ -4,7 +4,9 @@ from datetime import datetime
 from dotenv import load_dotenv
 import smtplib
 from email.message import EmailMessage
-import ssl
+import SSL
+import os
+os.environ["STREAMLIT_CLOUD"] = "1"
 
 load_dotenv()
 
@@ -15,7 +17,7 @@ ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 # --------------------------
 # Create DB and tables if not exists
 def initialize_database():
-    if not os.path.exists("booking.db"):
+   if os.environ.get("STREAMLIT_CLOUD", "0") == "1" or not os.path.exists("booking.db"):
         print("🔧 Creating booking.db...")
         with open("schema.sql", "r") as f:
             schema = f.read()
@@ -272,4 +274,5 @@ def get_teacher_unavailability():
     cols = [desc[0] for desc in cursor.description]
     conn.close()
     return [dict(zip(cols, row)) for row in rows]
+
 
